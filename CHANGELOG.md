@@ -161,6 +161,8 @@ Status of the `main` branch. Changes prior to the next official version change w
     thread (#2038)
 
 * Language Servers:
+  - Add: Oracle PL/SQL support (language `plsql`) via a custom pygls-based language server shipped with Serena;
+    symbols, references, definitions, hover; configurable file extensions via `ls_specific_settings.plsql.file_extensions`
   - Fix: Vue companion TypeScript indexing now respects project ignore patterns and ignored
     directory names, avoiding opening ignored release snapshots, vendored components and build output
   - Add: configurable JDTLS Maven/Gradle import, `updateBuildConfiguration`, and autobuild settings under `ls_specific_settings.java` (#1976)

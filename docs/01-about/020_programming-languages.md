@@ -145,6 +145,13 @@ Some languages require additional installations or setup steps, as noted.
   the experimental [PHPantom](https://github.com/PHPantom-dev/phpantom_lsp) backend (language `php_phpantom`);
   and the experimental standalone [Devsense PHP Language Server](https://www.npmjs.com/package/devsense-php-ls)
   (language `php_devsense`), which is installed with npm when needed
+* **PL/SQL** (Oracle)  
+  (no installation required — uses a custom pygls-based language server shipped with Serena; supports document
+  symbols, workspace symbols, references, go-to-definition and hover for packages, subprograms (incl. overloads),
+  types, cursors, variables, constants, exceptions and triggers; default file extensions are `.pks`, `.pkb` and `.pck`,
+  further extensions can be added via `ls_specific_settings.plsql.file_extensions`, e.g. `[".spec", ".body", ".trigger"]`;
+  SQL objects such as tables and columns are not resolved, so a column that shares its name with a subprogram may be
+  reported as a reference)
 * **PowerShell**  
   (requires PowerShell 7+ (`pwsh`) on PATH or in a standard install location; Serena automatically downloads PowerShell Editor Services 4.4.0 and installs PSScriptAnalyzer 1.25.0 via `Save-Module` from your configured PowerShell repository)
 * **Python**
