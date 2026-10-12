@@ -3,7 +3,7 @@ create or replace package body Order_Mgmt as
   g_last_order number;
 
   cursor c_lines(p_order_id number) is
-    select line_no, item
+    select line_no, item, procedure
       from order_lines
      where order_id = p_order_id;
 
@@ -57,6 +57,8 @@ create or replace package body Order_Mgmt as
     if p_force or l_count = 0 then
       Mark_Closed(p_order_id);
     end if;
+    insert into order_events (order_id, procedure, function)
+    values (p_order_id, 'Close_Order', 'none');
     Audit_Log.Write_Entry(case when p_force then 'Force' else 'Close' end, p_order_id);
   end Close_Order;
 

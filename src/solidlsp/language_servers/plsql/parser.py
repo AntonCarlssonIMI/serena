@@ -470,7 +470,7 @@ class PlsqlParser:
                     if token.is_symbol(";"):
                         self._advance()
                         return
-                    if stop_at_subprogram and token.is_word("PROCEDURE", "FUNCTION") and not self._previous_is_symbol("."):
+                    if stop_at_subprogram and self._at_subprogram_start():
                         return
                 if token.is_symbol("("):
                     depth += 1
@@ -482,6 +482,16 @@ class PlsqlParser:
                 if not self._collect_name_use(scope):
                     self._advance()
 
+        def _at_subprogram_start(self) -> bool:
+            """
+            :return: whether the current token is a ``procedure``/``function`` keyword introducing a subprogram rather
+                than a name (e.g. a column named ``procedure`` in a select list)
+            """
+            if not self._tokens[self._pos].is_word("PROCEDURE", "FUNCTION") or self._previous_is_symbol(".", ",", "("):
+                return False
+            name = self._peek(1)
+            return name is not None and name.is_identifier() and not (name.kind == TokenKind.WORD and name.key in self._NON_REFERENCE_WORDS)
+
         def _skip_line(self, collect_uses: bool) -> None:
             line = self._advance().line
             while not self._at_end() and self._tokens[self._pos].line == line:
@@ -492,15 +502,15 @@ class PlsqlParser:
             """
             Consumes the statements of a block whose opening keyword has been consumed, up to and including the
             matching ``END`` with its optional label and semicolon, collecting name uses.
-            Stops early (without consuming) at a unit separator or a ``procedure``/``function``/``create`` keyword,
-            which indicates a missing ``END``.
+            Stops early (without consuming) at a unit separator or at a ``procedure``/``function``/``create`` keyword
+            starting a statement, which indicates a missing ``END``. Elsewhere, these words are names (e.g. columns).
             """
             depth = 1
             while not self._at_end():
                 token = self._tokens[self._pos]
                 if token.kind == TokenKind.UNIT_SEPARATOR:
                     return
-                if token.is_word("PROCEDURE", "FUNCTION", "CREATE") and not self._previous_is_symbol("."):
+                if token.is_word("PROCEDURE", "FUNCTION", "CREATE") and self._previous_is_symbol(";"):
                     return
                 if token.is_word("END"):
                     self._advance()
