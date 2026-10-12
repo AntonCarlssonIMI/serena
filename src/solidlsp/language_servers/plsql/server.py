@@ -15,8 +15,9 @@ from lsprotocol import types as lsp
 from pygls.lsp.server import LanguageServer
 from pygls.uris import to_fs_path
 
+from solidlsp.language_servers.plsql.name_resolver import NameResolver
 from solidlsp.language_servers.plsql.parser import PlsqlParser
-from solidlsp.language_servers.plsql.syntax import Declaration, DeclarationKind, SourceUnit, TextRange
+from solidlsp.language_servers.plsql.syntax import Declaration, DeclarationKind, SourceLocation, SourceUnit, TextPosition, TextRange
 from solidlsp.language_servers.plsql.workspace_index import WorkspaceIndex
 
 log = logging.getLogger(__name__)
@@ -24,8 +25,8 @@ log = logging.getLogger(__name__)
 
 class PlsqlServer(LanguageServer):
     """
-    Language server for Oracle PL/SQL, answering requests from an in-memory index of all PL/SQL sources in the
-    workspace folders.
+    Language server for Oracle PL/SQL, answering document symbol, definition, references, hover and workspace symbol
+    requests from an in-memory index of all PL/SQL sources in the workspace folders.
 
     Initialization options:
 
@@ -58,6 +59,7 @@ class PlsqlServer(LanguageServer):
         self._file_extensions: tuple[str, ...] = self._DEFAULT_FILE_EXTENSIONS
         self._encoding = "utf-8"
         self._index = WorkspaceIndex(PlsqlParser())
+        self._resolver = NameResolver(self._index)
         self._register_features()
 
     def _register_features(self) -> None:
@@ -91,6 +93,43 @@ class PlsqlServer(LanguageServer):
         def document_symbol(params: lsp.DocumentSymbolParams) -> list[lsp.DocumentSymbol]:
             unit = self._get_unit(params.text_document.uri)
             return [self._to_document_symbol(declaration) for declaration in unit.declarations if declaration.is_symbol]
+
+        @self.feature(lsp.TEXT_DOCUMENT_DEFINITION)
+        def definition(params: lsp.DefinitionParams) -> list[lsp.Location]:
+            uri = self._prepare(params.text_document.uri)
+            definitions = self._resolver.find_definitions(uri, self._to_text_position(params.position))
+            return [self._to_location(SourceLocation(d.uri, d.name_range)) for d in definitions]
+
+        @self.feature(lsp.TEXT_DOCUMENT_REFERENCES)
+        def references(params: lsp.ReferenceParams) -> list[lsp.Location]:
+            uri = self._prepare(params.text_document.uri)
+            locations = self._resolver.find_references(
+                uri, self._to_text_position(params.position), include_declaration=params.context.include_declaration
+            )
+            return [self._to_location(location) for location in locations]
+
+        @self.feature(lsp.TEXT_DOCUMENT_HOVER)
+        def hover(params: lsp.HoverParams) -> lsp.Hover | None:
+            uri = self._prepare(params.text_document.uri)
+            declarations = self._resolver.find_declarations(uri, self._to_text_position(params.position))
+            if not declarations:
+                return None
+            return lsp.Hover(contents=lsp.MarkupContent(kind=lsp.MarkupKind.Markdown, value=f"```plsql\n{declarations[0].header}\n```"))
+
+        @self.feature(lsp.WORKSPACE_SYMBOL)
+        def workspace_symbol(params: lsp.WorkspaceSymbolParams) -> list[lsp.SymbolInformation]:
+            query = params.query.lower()
+            return [
+                lsp.SymbolInformation(
+                    name=declaration.name,
+                    kind=self._SYMBOL_KINDS[declaration.kind],
+                    location=self._to_location(SourceLocation(declaration.uri, declaration.name_range)),
+                    container_name=declaration.parent.name if declaration.parent is not None else None,
+                )
+                for unit in self._index.iter_units()
+                for declaration in unit.iter_declarations()
+                if declaration.is_symbol and query in declaration.name.lower()
+            ]
 
     def _configure(self, options: Any) -> None:
         if not isinstance(options, dict):
@@ -156,6 +195,16 @@ class PlsqlServer(LanguageServer):
             unit = self._index.get_unit(self._canonical_uri(uri))
         return unit if unit is not None else SourceUnit(uri, [], [])
 
+    def _prepare(self, uri: str) -> str:
+        """
+        Ensures that the given document is indexed.
+
+        :param uri: a document URI as sent by the client
+        :return: the canonical URI under which the document is indexed
+        """
+        self._get_unit(uri)
+        return self._canonical_uri(uri)
+
     # URIs
 
     @staticmethod
@@ -176,6 +225,13 @@ class PlsqlServer(LanguageServer):
             start=lsp.Position(line=text_range.start.line, character=text_range.start.character),
             end=lsp.Position(line=text_range.end.line, character=text_range.end.character),
         )
+
+    @staticmethod
+    def _to_text_position(position: lsp.Position) -> TextPosition:
+        return TextPosition(position.line, position.character)
+
+    def _to_location(self, location: SourceLocation) -> lsp.Location:
+        return lsp.Location(uri=location.uri, range=self._to_lsp_range(location.range))
 
     def _to_document_symbol(self, declaration: Declaration) -> lsp.DocumentSymbol:
         return lsp.DocumentSymbol(
