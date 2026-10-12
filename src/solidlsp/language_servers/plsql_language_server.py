@@ -42,7 +42,20 @@ class PlsqlLanguageServer(SolidLanguageServer):
 
     def __init__(self, config: LanguageServerConfig, repository_root_path: str, solidlsp_settings: SolidLSPSettings):
         super().__init__(config, repository_root_path, None, "plsql", solidlsp_settings)
+        self._sync_source_fn_matcher()
         self._index_ready = threading.Event()
+
+    def _sync_source_fn_matcher(self) -> None:
+        """
+        Adds the configured ``file_extensions`` to the source-file matcher, such that Serena and the server
+        (which receives the matcher's extensions) treat the same files as PL/SQL sources.
+        """
+        file_extensions = self._custom_settings.get("file_extensions", [])
+        if not isinstance(file_extensions, list):
+            log.warning("The 'file_extensions' setting should be a list of strings. Ignoring the provided value: %s", file_extensions)
+            return
+        normalised = [extension if extension.startswith(".") else f".{extension}" for extension in map(str, file_extensions)]
+        self.ls_id.get_source_fn_matcher().add_extensions(*normalised)
 
     def _create_dependency_provider(self) -> LanguageServerDependencyProvider:
         return self.DependencyProvider(self._custom_settings, self._ls_resources_dir)
