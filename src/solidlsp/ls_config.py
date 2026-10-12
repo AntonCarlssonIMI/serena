@@ -199,6 +199,12 @@ class LanguageServerId(Enum):
     Uses a custom LSP server based on pygls. Automatically sets up
     a virtual environment with pygls dependencies on first use.
     """
+    PLSQL = "plsql"
+    """Oracle PL/SQL language server.
+    Uses a custom LSP server based on pygls, shipped with SolidLSP (no installation required).
+    Supports .pks, .pkb and .pck files; further extensions can be configured via
+    ``file_extensions`` in ``ls_specific_settings``.
+    """
     BSL = "bsl"
     """BSL Language Server for 1C:Enterprise and OneScript languages.
     Uses bsl-language-server by 1c-syntax. Automatically downloads the JAR.
@@ -657,6 +663,8 @@ class LanguageServerId(Enum):
                 return FilenameMatcher(".yaml", ".yml")
             case self.MSL:
                 return FilenameMatcher(".mrc")
+            case self.PLSQL:
+                return FilenameMatcher(".pks", ".pkb", ".pck", case_sensitive=False)
             case self.BSL:
                 return FilenameMatcher(".bsl", ".os")
             case self.ADA:
@@ -968,6 +976,10 @@ class LanguageServerId(Enum):
                 from solidlsp.language_servers.msl_language_server import MslLanguageServer
 
                 return MslLanguageServer
+            case self.PLSQL:
+                from solidlsp.language_servers.plsql_language_server import PlsqlLanguageServer
+
+                return PlsqlLanguageServer
             case self.BSL:
                 from solidlsp.language_servers.bsl_language_server import BSLLanguageServer
 
