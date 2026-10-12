@@ -527,7 +527,47 @@ class PlsqlParser:
                 if token.is_word("DECLARE"):
                     block = self._declare_anonymous_block(self._advance(), container=scope)
                     self._parse_declarative_section(block, local=True)
+                    if self._accept_word("BEGIN"):
+                        self._scan_block(block)
                     continue
+                if self._at_for_loop():
+                    self._scan_for_loop(scope)
+                    continue
+                if not self._collect_name_use(scope):
+                    self._advance()
+
+        def _at_for_loop(self) -> bool:
+            """:return: whether the current token starts a ``for <index> in ... loop`` statement"""
+            index = self._peek(1)
+            keyword = self._peek(2)
+            return (
+                self._peek_is_word("FOR") and index is not None and index.is_identifier() and keyword is not None and keyword.is_word("IN")
+            )
+
+        def _scan_for_loop(self, scope: Declaration) -> None:
+            """
+            Consumes a ``for`` loop up to and including its ``end loop``, scanning the loop's statements in a scope
+            that declares the loop index, which shadows equally named outer declarations.
+            Stops after the loop header if it is not followed by ``loop``.
+            """
+            block = self._declare_anonymous_block(self._advance(), container=scope)
+            index = self._advance()
+            self._complete(self._declare(DeclarationKind.VARIABLE, index, index, block, is_symbol=False), index, header_end=None)
+
+            # the loop bounds or cursor belong to the enclosing scope
+            depth = 0
+            while not self._at_end():
+                token = self._tokens[self._pos]
+                if token.kind == TokenKind.UNIT_SEPARATOR or (depth == 0 and token.is_symbol(";")):
+                    return
+                if depth == 0 and token.is_word("LOOP"):
+                    self._advance()
+                    self._scan_block(block)
+                    return
+                if token.is_symbol("("):
+                    depth += 1
+                elif token.is_symbol(")"):
+                    depth = max(0, depth - 1)
                 if not self._collect_name_use(scope):
                     self._advance()
 

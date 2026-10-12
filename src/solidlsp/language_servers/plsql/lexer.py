@@ -64,6 +64,8 @@ class Token:
 class PlsqlLexer:
     """
     Splits PL/SQL source text into tokens, dropping whitespace, comments and string literals.
+    At unit level (before a unit's ``create``/``begin``/``declare`` keyword), SQL*Plus remark and prompt lines are
+    dropped as comments, since their free text may contain apostrophes that would otherwise start a string literal.
     """
 
     _PATTERN = re.compile(
@@ -81,6 +83,8 @@ class PlsqlLexer:
         re.VERBOSE | re.DOTALL,
     )
     _SKIPPED_GROUPS = frozenset({"space", "line_comment", "block_comment", "quoted_string", "string"})
+    _SQLPLUS_COMMENT_COMMANDS = frozenset({"REM", "REMARK", "PRO", "PROMPT"})
+    _UNIT_START_WORDS = frozenset({"CREATE", "BEGIN", "DECLARE"})
 
     def tokenize(self, text: str) -> list[Token]:
         """
@@ -90,7 +94,12 @@ class PlsqlLexer:
         line_starts = [0] + [match.end() for match in re.finditer("\n", text)]
         tokens: list[Token] = []
         line = 0
-        for match in self._PATTERN.finditer(text):
+        at_unit_level = True
+        position = 0
+        while position < len(text):
+            match = self._PATTERN.match(text, position)
+            assert match is not None, "the symbol alternative matches any character"
+            position = match.end()
             group = match.lastgroup
             if group in self._SKIPPED_GROUPS:
                 continue
@@ -99,6 +108,15 @@ class PlsqlLexer:
             start = match.start()
             while line + 1 < len(line_starts) and line_starts[line + 1] <= start:
                 line += 1
+
+            # skip SQL*Plus comment lines between units
+            if at_unit_level and group == "word":
+                word = match.group().upper()
+                if word in self._SQLPLUS_COMMENT_COMMANDS and not text[line_starts[line] : start].strip():
+                    position = line_starts[line + 1] if line + 1 < len(line_starts) else len(text)
+                    continue
+                if word in self._UNIT_START_WORDS:
+                    at_unit_level = False
 
             # classify the token
             token_text = match.group()
@@ -110,6 +128,7 @@ class PlsqlLexer:
                 kind, key = TokenKind.NUMBER, token_text
             elif token_text == "/" and self._is_alone_on_line(text, line_starts, line):
                 kind, key = TokenKind.UNIT_SEPARATOR, token_text
+                at_unit_level = True
             else:
                 kind, key = TokenKind.SYMBOL, token_text
             tokens.append(Token(kind, token_text, key, line, start - line_starts[line], start))

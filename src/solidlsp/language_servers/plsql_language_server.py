@@ -35,7 +35,8 @@ class PlsqlLanguageServer(SolidLanguageServer):
         """
 
         def _create_default_base_command(self) -> list[str]:
-            return [sys.executable, "-m", "solidlsp.language_servers.plsql.server"]
+            # -P: the server runs in the project directory, whose modules must not shadow the server's imports
+            return [sys.executable, "-P", "-m", "solidlsp.language_servers.plsql.server"]
 
         def _create_launch_command_from_base_command(self, base_command: list[str]) -> list[str]:
             return base_command
