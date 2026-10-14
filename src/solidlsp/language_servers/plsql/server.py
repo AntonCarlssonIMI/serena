@@ -179,7 +179,7 @@ class PlsqlServer(LanguageServer):
         try:
             self._index.update(uri, text)
         except Exception:
-            # a single unparseable file must not disable the server
+            # a single unparsable file must not disable the server
             log.exception("Failed to index %s", path)
 
     def _get_unit(self, uri: str) -> SourceUnit:
