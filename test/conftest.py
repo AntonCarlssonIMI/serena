@@ -334,6 +334,7 @@ _LANGUAGE_PYTEST_MARKERS: dict[LanguageServerId, list[MarkDecorator | Mark]] = {
     LanguageServerId.LUA_EMMYLUA: [pytest.mark.lua],
     LanguageServerId.MSL: [pytest.mark.msl],
     LanguageServerId.PLSQL: [pytest.mark.plsql],
+    LanguageServerId.NASM: [pytest.mark.nasm],
     LanguageServerId.PHP: [pytest.mark.php],
     LanguageServerId.PHP_PHPACTOR: [pytest.mark.php],
     LanguageServerId.PHP_PHPANTOM: [pytest.mark.php],

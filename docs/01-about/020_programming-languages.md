@@ -134,6 +134,15 @@ Some languages require additional installations or setup steps, as noted.
 * **mSL** (mIRC Scripting Language)  
   (auto-installed; no external dependencies required — uses a custom pygls-based LSP server shipped with Serena;
   supports document symbols, workspace symbols, references, and go-to-definition for aliases, events, menus, dialogs, and CTCP handlers in `.mrc` files)
+* **NASM** (assembly; experimental, i.e. must be enabled explicitly as language `nasm`)  
+  (no installation required — uses a custom pygls-based language server shipped with Serena; supports document
+  symbols, workspace symbols, references, go-to-definition and hover for routines (non-local labels, whose symbol
+  extends to their last instruction, such that a routine's body can be retrieved on its own), local labels (scoped
+  to their routine), data labels, multi-line macros, single-line macros (`%define`, `%assign`), `equ` constants and
+  structures (`struc`) with their fields; default file extensions are `.asm`, `.nasm`, `.inc` and `.mac`, further
+  extensions can be added via `ls_specific_settings.nasm.file_extensions`; instructions are not interpreted, so a
+  name is resolved to a label in the same file first and otherwise to the labels of that name in all other files,
+  and labels defined inside macro bodies are not reported)
 * **Nextflow**  
   (uses the official [Nextflow language server](https://github.com/nextflow-io/language-server), which is automatically
   downloaded; requires a Java 17+ runtime, discovered via `ls_specific_settings.nextflow.java_home`, `JAVA_HOME` or `java` on PATH;

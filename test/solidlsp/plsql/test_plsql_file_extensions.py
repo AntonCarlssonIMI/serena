@@ -10,9 +10,11 @@ from solidlsp import SolidLanguageServer
 from solidlsp.ls_config import LanguageServerId
 from solidlsp.ls_types import SymbolKind
 from test.conftest import start_ls_context
-from test.solidlsp.plsql.source_positions import SourceLine, find_position
+from test.solidlsp.util.source_positions import SourceLine, TestRepoSources
 
 pytestmark = [pytest.mark.plsql]
+
+_SOURCES = TestRepoSources(LanguageServerId.PLSQL)
 
 
 @pytest.fixture(scope="module")
@@ -35,11 +37,11 @@ def test_triggers_are_reported_as_symbols(language_server: SolidLanguageServer) 
 
 
 def test_references_include_files_with_configured_extension(language_server: SolidLanguageServer) -> None:
-    position = find_position("order_mgmt.pks", "Read_Order(p_order_id in number")
+    position = _SOURCES.position("order_mgmt.pks", "Read_Order(p_order_id in number")
     locations = language_server.request_references("order_mgmt.pks", position.line, position.column)
 
     assert {SourceLine.from_location(location) for location in locations} == {
-        SourceLine.of("order_mgmt.pkb", "Read_Order(p_order_id, l_order)"),
-        SourceLine.of("shipment.pkb", "Read_Order(p_order_id, l_order)"),
-        SourceLine.of("triggers.trigger", "Read_Order(:new.order_id"),
+        _SOURCES.line("order_mgmt.pkb", "Read_Order(p_order_id, l_order)"),
+        _SOURCES.line("shipment.pkb", "Read_Order(p_order_id, l_order)"),
+        _SOURCES.line("triggers.trigger", "Read_Order(:new.order_id"),
     }

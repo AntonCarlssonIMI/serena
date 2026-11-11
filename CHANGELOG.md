@@ -17,6 +17,10 @@ Status of the `main` branch. Changes prior to the next official version change w
     if the IDE's plugin server is not reachable.
 
 * Language Servers:
+  - Add: NASM assembly support (experimental, language `nasm`) via a custom pygls-based language server
+    shipped with Serena; symbols (routines spanning their bodies, local labels, data, macros, constants,
+    structures), cross-file references, definitions, hover; configurable file extensions via
+    `ls_specific_settings.nasm.file_extensions`
   - Fix: detect Elixir installed via a Windows batch launcher
   - Extend allowed types in persisted symbol caches, fixing cache loading issues with `clangd`
     when overriding values like `ls_path`, `clangd_version` or `compile_commands_dir`

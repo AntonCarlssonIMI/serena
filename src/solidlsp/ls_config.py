@@ -206,6 +206,12 @@ class LanguageServerId(Enum):
     Supports .pks, .pkb and .pck files; further extensions can be configured via
     ``file_extensions`` in ``ls_specific_settings``.
     """
+    NASM = "nasm"
+    """NASM assembly language server (experimental, as its default extensions are shared with other assemblers).
+    Uses a custom LSP server based on pygls, shipped with SolidLSP (no installation required).
+    Supports .asm, .nasm, .inc and .mac files; further extensions can be configured via
+    ``file_extensions`` in ``ls_specific_settings``.
+    """
     BSL = "bsl"
     """BSL Language Server for 1C:Enterprise and OneScript languages.
     Uses bsl-language-server by 1c-syntax. Automatically downloads the JAR.
@@ -419,6 +425,7 @@ class LanguageServerId(Enum):
             self.DENO,
             self.GRAPHQL,
             self.LUA_EMMYLUA,
+            self.NASM,
         }
 
     def is_superset_language(self) -> bool:
@@ -684,6 +691,8 @@ class LanguageServerId(Enum):
                 return FilenameMatcher(".mrc")
             case self.PLSQL:
                 return FilenameMatcher(".pks", ".pkb", ".pck", case_sensitive=False)
+            case self.NASM:
+                return FilenameMatcher(".asm", ".nasm", ".inc", ".mac", case_sensitive=False)
             case self.BSL:
                 return FilenameMatcher(".bsl", ".os")
             case self.ADA:
@@ -1009,6 +1018,10 @@ class LanguageServerId(Enum):
                 from solidlsp.language_servers.plsql_language_server import PlsqlLanguageServer
 
                 return PlsqlLanguageServer
+            case self.NASM:
+                from solidlsp.language_servers.nasm_language_server import NasmLanguageServer
+
+                return NasmLanguageServer
             case self.BSL:
                 from solidlsp.language_servers.bsl_language_server import BSLLanguageServer
 

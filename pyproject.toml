@@ -383,6 +383,7 @@ markers = [
   "ansible: language server running for Ansible (uses @ansible/ansible-language-server)",
   "msl: language server running for mSL (mIRC Scripting Language)",
   "plsql: language server running for Oracle PL/SQL",
+  "nasm: language server running for NASM assembly",
   "bsl: language server running for BSL (1C:Enterprise / OneScript)",
   "html: language server running for HTML (vscode-html-language-server, used as companion by Angular)",
   "scss: language server running for SCSS / Sass / CSS (some-sass-language-server)",

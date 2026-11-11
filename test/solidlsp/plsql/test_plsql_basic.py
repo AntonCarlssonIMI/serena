@@ -7,9 +7,11 @@ import pytest
 from solidlsp import SolidLanguageServer
 from solidlsp.ls_config import LanguageServerId
 from solidlsp.ls_types import SymbolKind, UnifiedSymbolInformation
-from test.solidlsp.plsql.source_positions import SourceLine, find_position
+from test.solidlsp.util.source_positions import SourceLine, TestRepoSources
 
 pytestmark = [pytest.mark.plsql]
+
+_SOURCES = TestRepoSources(LanguageServerId.PLSQL)
 
 
 def _roots(language_server: SolidLanguageServer, relative_path: str) -> list[UnifiedSymbolInformation]:
@@ -59,8 +61,8 @@ class TestDocumentSymbols:
     def test_subprogram_range_spans_whole_implementation(self, language_server: SolidLanguageServer) -> None:
         close_order = _child(_roots(language_server, "order_mgmt.pkb")[0], "Close_Order")
 
-        assert close_order["range"]["start"]["line"] == find_position("order_mgmt.pkb", "procedure Close_Order").line
-        assert close_order["range"]["end"]["line"] == find_position("order_mgmt.pkb", "end Close_Order;").line
+        assert close_order["range"]["start"]["line"] == _SOURCES.position("order_mgmt.pkb", "procedure Close_Order").line
+        assert close_order["range"]["end"]["line"] == _SOURCES.position("order_mgmt.pkb", "end Close_Order;").line
 
     def test_file_with_several_units_reports_each_unit(self, language_server: SolidLanguageServer) -> None:
         roots = _roots(language_server, "audit_log.pck")
@@ -68,7 +70,7 @@ class TestDocumentSymbols:
         assert [(root["name"], root["kind"]) for root in roots] == [("Audit_Log", SymbolKind.Module), ("Audit_Log", SymbolKind.Module)]
         assert sorted(_child_names(roots[1])) == sorted(["g_count", "Write_Entry", "Entry_Count", "Reset"])
         entry_count = _child(roots[1], "Entry_Count")
-        assert entry_count["range"]["end"]["line"] == find_position("audit_log.pck", "end Entry_Count;").line
+        assert entry_count["range"]["end"]["line"] == _SOURCES.position("audit_log.pck", "end Entry_Count;").line
 
     def test_malformed_unit_does_not_hide_following_units(self, language_server: SolidLanguageServer) -> None:
         roots = _roots(language_server, "legacy_broken.pck")
@@ -77,7 +79,7 @@ class TestDocumentSymbols:
         assert _child_names(roots[1]) == ["Still_Found"]
 
     def test_symbols_reflect_unsaved_edits(self, language_server: SolidLanguageServer) -> None:
-        insert_line = find_position("audit_log.pck", "end Audit_Log;", occurrence=1).line
+        insert_line = _SOURCES.position("audit_log.pck", "end Audit_Log;", occurrence=1).line
 
         with language_server.open_file("audit_log.pck"):
             end = language_server.insert_text_at_position(
@@ -93,7 +95,7 @@ class TestDocumentSymbols:
 class TestNavigation:
     @staticmethod
     def _definitions(language_server: SolidLanguageServer, relative_path: str, needle: str) -> set[SourceLine]:
-        position = find_position(relative_path, needle)
+        position = _SOURCES.position(relative_path, needle)
         return {
             SourceLine.from_location(location)
             for location in language_server.request_definition(relative_path, position.line, position.column)
@@ -101,7 +103,7 @@ class TestNavigation:
 
     @staticmethod
     def _references(language_server: SolidLanguageServer, relative_path: str, needle: str) -> set[SourceLine]:
-        position = find_position(relative_path, needle)
+        position = _SOURCES.position(relative_path, needle)
         return {
             SourceLine.from_location(location)
             for location in language_server.request_references(relative_path, position.line, position.column)
@@ -109,61 +111,61 @@ class TestNavigation:
 
     def test_definition_of_qualified_call_is_body_implementation(self, language_server: SolidLanguageServer) -> None:
         assert self._definitions(language_server, "shipment.pkb", "Read_Order(p_order_id, l_order)") == {
-            SourceLine.of("order_mgmt.pkb", "function Read_Order")
+            _SOURCES.line("order_mgmt.pkb", "function Read_Order")
         }
 
     def test_definition_of_overloaded_call_matches_argument_count(self, language_server: SolidLanguageServer) -> None:
         assert self._definitions(language_server, "order_mgmt.pkb", "Add_Line(p_order_id, p_item, 1)") == {
-            SourceLine.of("order_mgmt.pkb", "procedure Add_Line", occurrence=1)
+            _SOURCES.line("order_mgmt.pkb", "procedure Add_Line", occurrence=1)
         }
         assert self._definitions(language_server, "shipment.pkb", "Add_Line(p_order_id, 'SHIPPING')") == {
-            SourceLine.of("order_mgmt.pkb", "procedure Add_Line", occurrence=0)
+            _SOURCES.line("order_mgmt.pkb", "procedure Add_Line", occurrence=0)
         }
 
     def test_definition_of_unqualified_spec_member_used_in_body(self, language_server: SolidLanguageServer) -> None:
         assert self._definitions(language_server, "order_mgmt.pkb", "c_max_lines then") == {
-            SourceLine.of("order_mgmt.pks", "c_max_lines constant")
+            _SOURCES.line("order_mgmt.pks", "c_max_lines constant")
         }
 
     def test_definition_of_nested_subprogram_call(self, language_server: SolidLanguageServer) -> None:
         assert self._definitions(language_server, "order_mgmt.pkb", "Mark_Closed(p_order_id)") == {
-            SourceLine.of("order_mgmt.pkb", "procedure Mark_Closed")
+            _SOURCES.line("order_mgmt.pkb", "procedure Mark_Closed")
         }
 
     def test_references_across_files_are_shared_by_spec_and_body(self, language_server: SolidLanguageServer) -> None:
         expected = {
-            SourceLine.of("order_mgmt.pkb", "Read_Order(p_order_id, l_order)"),
-            SourceLine.of("shipment.pkb", "Read_Order(p_order_id, l_order)"),
+            _SOURCES.line("order_mgmt.pkb", "Read_Order(p_order_id, l_order)"),
+            _SOURCES.line("shipment.pkb", "Read_Order(p_order_id, l_order)"),
         }
         assert self._references(language_server, "order_mgmt.pks", "Read_Order(p_order_id in number") == expected
         assert self._references(language_server, "order_mgmt.pkb", "Read_Order(p_order_id in number") == expected
 
     def test_references_distinguish_overloads(self, language_server: SolidLanguageServer) -> None:
         assert self._references(language_server, "order_mgmt.pkb", "Add_Line(p_order_id in number, p_item in varchar2, p_qty") == {
-            SourceLine.of("order_mgmt.pkb", "Add_Line(p_order_id, p_item, 1)")
+            _SOURCES.line("order_mgmt.pkb", "Add_Line(p_order_id, p_item, 1)")
         }
         assert self._references(language_server, "order_mgmt.pks", "Add_Line(p_order_id in number, p_item in varchar2);") == {
-            SourceLine.of("shipment.pkb", "Add_Line(p_order_id, 'SHIPPING')")
+            _SOURCES.line("shipment.pkb", "Add_Line(p_order_id, 'SHIPPING')")
         }
 
     def test_references_within_file(self, language_server: SolidLanguageServer) -> None:
         assert self._references(language_server, "order_mgmt.pkb", "Mark_Closed(p_id in number)") == {
-            SourceLine.of("order_mgmt.pkb", "Mark_Closed(p_order_id)")
+            _SOURCES.line("order_mgmt.pkb", "Mark_Closed(p_order_id)")
         }
 
     def test_references_skip_shadowing_local_declarations(self, language_server: SolidLanguageServer) -> None:
         assert self._references(language_server, "audit_log.pck", "Entry_Count return number;") == {
-            SourceLine.of("shipment.pkb", "Entry_Count > 100")
+            _SOURCES.line("shipment.pkb", "Entry_Count > 100")
         }
 
     def test_referencing_symbols_are_enclosing_subprograms(self, language_server: SolidLanguageServer) -> None:
-        position = find_position("audit_log.pck", "Write_Entry(p_action in varchar2, p_ref_id in number);")
+        position = _SOURCES.position("audit_log.pck", "Write_Entry(p_action in varchar2, p_ref_id in number);")
         referencing = language_server.request_referencing_symbols("audit_log.pck", position.line, position.column)
 
         assert sorted(reference.symbol["name"] for reference in referencing) == ["Add_Line", "Close_Order"]
 
     def test_hover_shows_declaration_header(self, language_server: SolidLanguageServer) -> None:
-        position = find_position("shipment.pkb", "Close_Order(p_order_id =>")
+        position = _SOURCES.position("shipment.pkb", "Close_Order(p_order_id =>")
         hover = language_server.request_hover("shipment.pkb", position.line, position.column)
 
         assert hover is not None
