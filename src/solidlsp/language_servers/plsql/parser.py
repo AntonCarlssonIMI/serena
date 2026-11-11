@@ -3,6 +3,7 @@
 Structural parsing of PL/SQL source text into declarations and name uses.
 """
 
+from solidlsp.language_servers.indexing_server.text import TextRange
 from solidlsp.language_servers.plsql.lexer import PlsqlLexer, Token, TokenKind
 from solidlsp.language_servers.plsql.syntax import (
     Declaration,
@@ -11,7 +12,6 @@ from solidlsp.language_servers.plsql.syntax import (
     NameUse,
     ParameterSignature,
     SourceUnit,
-    TextRange,
 )
 
 

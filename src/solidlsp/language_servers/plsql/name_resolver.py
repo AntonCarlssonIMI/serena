@@ -3,7 +3,8 @@
 Resolution of PL/SQL name uses to declarations.
 """
 
-from solidlsp.language_servers.plsql.syntax import Declaration, DeclarationKind, NameUse, SourceLocation, TextPosition
+from solidlsp.language_servers.indexing_server.text import SourceLocation, TextPosition
+from solidlsp.language_servers.plsql.syntax import Declaration, DeclarationKind, NameUse
 from solidlsp.language_servers.plsql.workspace_index import WorkspaceIndex
 
 

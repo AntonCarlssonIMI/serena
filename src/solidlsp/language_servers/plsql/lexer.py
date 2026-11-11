@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
-from solidlsp.language_servers.plsql.syntax import TextPosition, TextRange
+from solidlsp.language_servers.indexing_server.text import TextPosition, TextRange
 
 
 class TokenKind(Enum):

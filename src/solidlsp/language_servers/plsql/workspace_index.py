@@ -5,11 +5,12 @@ In-memory index of the parsed PL/SQL sources of a workspace.
 
 from collections.abc import Iterator
 
+from solidlsp.language_servers.indexing_server.server import SourceIndex
 from solidlsp.language_servers.plsql.parser import PlsqlParser
 from solidlsp.language_servers.plsql.syntax import Declaration, NameUse, SourceUnit
 
 
-class WorkspaceIndex:
+class WorkspaceIndex(SourceIndex[SourceUnit]):
     """
     The parsed PL/SQL sources of a workspace, with lookups by name across all sources.
     """
