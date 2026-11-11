@@ -6,18 +6,19 @@ project_name: "project_name"
 #   bash                   bsl                    clojure                cpp                    cpp_ccls
 #   crystal                csharp                 csharp_omnisharp       cue                    dart
 #   deno                   elixir                 elm                    erlang                 fortran
-#   fsharp                 gdscript               gleam                  go                     groovy
-#   haskell                haxe                   hlsl                   html                   java
-#   json                   julia                  julia_fatou            kotlin                 latex
-#   lean4                  lua                    lua_emmylua            luau                   markdown
-#   matlab                 msl                    nextflow               nix                    ocaml
-#   pascal                 perl                   php                    php_devsense           php_phpactor
-#   php_phpantom           plsql                  powershell             python                 python_basedpyright
-#   python_jedi            python_pyrefly         python_ty              qml                    r
-#   rego                   ruby                   ruby_solargraph        rust                   scala
-#   scss                   solidity               svelte                 swift                  systemverilog
-#   terraform              toml                   typescript             typescript_vts         vue
-#   wolfram                yaml                   zig
+#   fsharp                 gdscript               gleam                  go                     graphql
+#   groovy                 haskell                haxe                   hlsl                   html
+#   java                   json                   julia                  julia_fatou            kotlin
+#   latex                  lean4                  lua                    lua_emmylua            luau
+#   markdown               matlab                 msl                    nextflow               nix
+#   ocaml                  pascal                 perl                   php                    php_devsense
+#   php_phpactor           php_phpantom           plsql                  powershell             python
+#   python_basedpyright    python_jedi            python_pyrefly         python_ty              qml
+#   r                      rego                   ruby                   ruby_solargraph        rust
+#   scala                  scss                   solidity               svelte                 swift
+#   systemverilog          terraform              toml                   typescript             typescript_tsgo
+#   typescript_vts         vbnet                  vue                    wolfram                yaml
+#   zig
 #   (This list may be outdated; generated with scripts/print_language_list.py;
 #   For the current list, see values of the LanguageServerId enum here:
 #   https://github.com/oraios/serena/blob/main/src/solidlsp/ls_config.py)
@@ -123,12 +124,13 @@ ignored_paths: []
 # Added on 2025-04-18
 read_only: false
 
-# list of tool names to exclude.
+# list of tool names (and tool markers) to exclude.
 # This extends the existing exclusions (e.g. from the global configuration)
 # Find the list of tools here: https://oraios.github.io/serena/01-about/035_tools.html
 excluded_tools: []
 
-# list of tools to include that would otherwise be disabled (particularly optional tools that are disabled by default).
+# list of tools (and tool markers) to include that would otherwise be disabled (particularly optional tools
+# that are disabled by default).
 # This extends the existing inclusions (e.g. from the global configuration).
 # Find the list of tools here: https://oraios.github.io/serena/01-about/035_tools.html
 included_optional_tools: []
@@ -139,6 +141,7 @@ included_optional_tools: []
 fixed_tools: []
 
 # list of APIs (facades or facade methods, e.g. "lsp" or "lsp.find_symbol") to exclude from the REPL.
+# Add "marker:editing" to exclude all editing functions.
 # This extends the existing exclusions (e.g. from the global configuration).
 excluded_apis: []
 

@@ -67,19 +67,28 @@ class ElixirTools(SolidLanguageServer):
         return super().is_ignored_dirname(dirname) or dirname in ["_build", "deps", "node_modules", ".elixir_ls", ".expert", "cover"]
 
     @override
-    def is_ignored_path(self, relative_path: str, ignore_unsupported_files: bool = True) -> bool:
+    def is_ignored_path(
+        self,
+        relative_path: str,
+        ignore_unsupported_files: bool = True,
+        dir_entry: os.DirEntry | None = None,
+        check_path_for_ignored_dirnames: bool = True,
+    ) -> bool:
         """Check if a path should be ignored for symbol indexing."""
         if relative_path.endswith("mix.exs"):
             # These are project configuration files, not source code with symbols to index
             return True
 
-        return super().is_ignored_path(relative_path, ignore_unsupported_files)
+        return super().is_ignored_path(
+            relative_path, ignore_unsupported_files, dir_entry=dir_entry, check_path_for_ignored_dirnames=check_path_for_ignored_dirnames
+        )
 
     @classmethod
     def _get_elixir_version(cls) -> str | None:
         """Get the installed Elixir version or None if not found."""
         try:
-            result = subprocess_run(["elixir", "--version"], capture_output=True, text=True, check=False)
+            command = ["cmd.exe", "/d", "/c", "elixir", "--version"] if os.name == "nt" else ["elixir", "--version"]
+            result = subprocess_run(command, capture_output=True, text=True, check=False)
             if result.returncode == 0:
                 return result.stdout.strip()
         except FileNotFoundError:
