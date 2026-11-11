@@ -18,8 +18,9 @@ Status of the `main` branch. Changes prior to the next official version change w
 
 * Language Servers:
   - Add: NASM assembly support (experimental, language `nasm`) via a custom pygls-based language server
-    shipped with Serena; symbols (routines spanning their bodies, local labels, data, macros, constants,
-    structures), cross-file references, definitions, hover; configurable file extensions via
+    shipped with Serena; symbols (routines spanning their header comments and bodies, local labels, data,
+    macros, constants, structures), cross-file references, definitions, scope-aware rename, hover;
+    configurable file extensions via
     `ls_specific_settings.nasm.file_extensions`
   - Fix: detect Elixir installed via a Windows batch launcher
   - Extend allowed types in persisted symbol caches, fixing cache loading issues with `clangd`

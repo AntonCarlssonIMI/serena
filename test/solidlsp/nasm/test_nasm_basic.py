@@ -45,19 +45,23 @@ class TestDocumentSymbols:
             ("string_length", SymbolKind.Function),
             ("print_string", SymbolKind.Function),
             ("count_char", SymbolKind.Function),
+            ("clear_mark", SymbolKind.Function),
         ]
         assert _child_names(roots[0]) == [".next_char", ".done"]
         assert _child_names(roots[2]) == [".next_char", ".skip", ".done"]
 
-    def test_routine_range_spans_body_up_to_last_instruction(self, language_server: SolidLanguageServer) -> None:
+    def test_routine_range_spans_header_comment_and_body_up_to_last_instruction(self, language_server: SolidLanguageServer) -> None:
         assert _line_span(_root(language_server, "strings.asm", "string_length")) == (
-            _SOURCES.position("strings.asm", "string_length:").line,
+            _SOURCES.position("strings.asm", "; returns in rax the length").line,
             _SOURCES.position("strings.asm", "    ret\n", occurrence=0).line,
         )
-        assert _line_span(_root(language_server, "strings.asm", "print_string")) == (
-            _SOURCES.position("strings.asm", "print_string:").line,
-            _SOURCES.position("strings.asm", "    ret\n", occurrence=1).line,
+        assert _line_span(_root(language_server, "strings.asm", "clear_mark")) == (
+            _SOURCES.position("strings.asm", "; clears the mark flag").line,
+            _SOURCES.position("strings.asm", "    ret\n", occurrence=3).line,
         )
+
+    def test_routine_without_header_comment_starts_at_label(self, language_server: SolidLanguageServer) -> None:
+        assert _line_span(_root(language_server, "main.asm", "_start"))[0] == _SOURCES.position("main.asm", "_start:").line
 
     def test_data_labels_are_variables(self, language_server: SolidLanguageServer) -> None:
         kinds = {root["name"]: root["kind"] for root in _roots(language_server, "main.asm")}
@@ -79,12 +83,13 @@ class TestDocumentSymbols:
             ("SYS_WRITE", SymbolKind.Constant),
             ("SYS_EXIT", SymbolKind.Constant),
             ("STDOUT", SymbolKind.Constant),
+            ("FLAG_MARK", SymbolKind.Constant),
             ("write_stdout", SymbolKind.Function),
             ("exit_process", SymbolKind.Function),
             ("point", SymbolKind.Struct),
         ]
-        assert [(child["name"], child["kind"]) for child in roots[5]["children"]] == [(".x", SymbolKind.Field), (".y", SymbolKind.Field)]
-        assert _line_span(roots[3]) == (
+        assert [(child["name"], child["kind"]) for child in roots[6]["children"]] == [(".x", SymbolKind.Field), (".y", SymbolKind.Field)]
+        assert _line_span(roots[4]) == (
             _SOURCES.position("macros.inc", "%macro write_stdout").line,
             _SOURCES.position("macros.inc", "%endmacro", occurrence=0).line,
         )
@@ -146,6 +151,9 @@ class TestNavigation:
         assert self._references(language_server, "strings.asm", ".next_char:", occurrence=0) == {
             _SOURCES.line("strings.asm", "jmp .next_char", occurrence=0)
         }
+
+    def test_references_include_bitwise_not_operands(self, language_server: SolidLanguageServer) -> None:
+        assert self._references(language_server, "macros.inc", "FLAG_MARK equ") == {_SOURCES.line("strings.asm", "~FLAG_MARK")}
 
     def test_referencing_symbols_are_enclosing_routines(self, language_server: SolidLanguageServer) -> None:
         position = _SOURCES.position("strings.asm", "string_length:")

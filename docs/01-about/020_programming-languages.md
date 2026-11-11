@@ -136,11 +136,14 @@ Some languages require additional installations or setup steps, as noted.
   supports document symbols, workspace symbols, references, and go-to-definition for aliases, events, menus, dialogs, and CTCP handlers in `.mrc` files)
 * **NASM** (assembly; experimental, i.e. must be enabled explicitly as language `nasm`)  
   (no installation required — uses a custom pygls-based language server shipped with Serena; supports document
-  symbols, workspace symbols, references, go-to-definition and hover for routines (non-local labels, whose symbol
-  extends to their last instruction, such that a routine's body can be retrieved on its own), local labels (scoped
+  symbols, workspace symbols, references, go-to-definition, rename and hover for routines (non-local labels, whose
+  symbol extends from the comment lines directly above the label, which typically document the calling convention,
+  to the routine's last instruction, such that a routine can be retrieved and replaced on its own), local labels (scoped
   to their routine), data labels, multi-line macros, single-line macros (`%define`, `%assign`), `equ` constants and
   structures (`struc`) with their fields; default file extensions are `.asm`, `.nasm`, `.inc` and `.mac`, further
-  extensions can be added via `ls_specific_settings.nasm.file_extensions`; instructions are not interpreted, so a
+  extensions can be added via `ls_specific_settings.nasm.file_extensions`; renaming changes code only (not comments)
+  and also updates fully qualified uses of a renamed label's local labels or structure fields (e.g. `join.done`);
+  no diagnostics are reported; instructions are not interpreted, so a
   name is resolved to a label in the same file first and otherwise to the labels of that name in all other files,
   and labels defined inside macro bodies are not reported)
 * **Nextflow**  

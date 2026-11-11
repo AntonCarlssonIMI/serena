@@ -3,11 +3,32 @@
 Syntax model of NASM sources: declarations, name uses and their positions.
 """
 
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 
 from solidlsp.language_servers.indexing_server.text import TextPosition, TextRange
+
+
+class Identifier:
+    """
+    The lexical rules of NASM identifiers.
+    """
+
+    PATTERN = re.compile(r"[A-Za-z_.?][\w.?$#@~]*")
+    """matches an identifier (without the escape prefix ``$``)"""
+
+    @staticmethod
+    def is_valid(name: str) -> bool:
+        return Identifier.PATTERN.fullmatch(name) is not None
+
+    @staticmethod
+    def is_local(name: str) -> bool:
+        """
+        :return: whether the name is local, i.e. qualified by the preceding non-local label (a single leading dot)
+        """
+        return name.startswith(".") and not name.startswith("..")
 
 
 class DeclarationKind(Enum):
@@ -45,7 +66,8 @@ class Declaration:
     """the URI of the document containing the declaration"""
     name_range: TextRange
     range: TextRange
-    """the full extent of the declaration, e.g. for a routine, from its label to its last instruction"""
+    """the full extent of the declaration including the comment lines directly above it, e.g. for a routine,
+    from its header comment to its last instruction"""
     header: str
     """the declaration's line, preceded by the comment lines directly above it"""
     parent: "Declaration | None" = field(default=None, repr=False)

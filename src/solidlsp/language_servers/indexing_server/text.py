@@ -42,3 +42,13 @@ class SourceLocation:
 
     uri: str
     range: TextRange
+
+
+@dataclass(frozen=True)
+class TextReplacement:
+    """
+    A replacement of the text in a range of a document.
+    """
+
+    location: SourceLocation
+    new_text: str

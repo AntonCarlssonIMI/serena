@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 
 from solidlsp.language_servers.indexing_server.text import TextPosition, TextRange
-from solidlsp.language_servers.nasm.syntax import Declaration, DeclarationKind, NameUse, SourceUnit
+from solidlsp.language_servers.nasm.syntax import Declaration, DeclarationKind, Identifier, NameUse, SourceUnit
 
 
 class NasmParser:
@@ -17,7 +17,8 @@ class NasmParser:
     The parser recognises labels (non-local labels with the local labels scoped to them), multi-line macros,
     single-line macros and ``equ`` constants as well as structures with their fields, and records every other
     identifier as a name use. Instructions are not interpreted: the extent of a label is the span of lines up to
-    its last instruction or data definition before the next top-level declaration or section directive.
+    its last instruction or data definition before the next top-level declaration or section directive, and it
+    starts with the comment lines directly above the declaration.
     Lines within multi-line macro bodies only contribute name uses, as their labels are instantiated per invocation.
     """
 
@@ -44,7 +45,9 @@ class NasmParser:
         A source line with its comment and the contents of its string literals removed.
         """
 
-        _IDENTIFIER = re.compile(r"(?<![\w.?$#@~%])[A-Za-z_.?][\w.?$#@~]*")
+        # identifiers can neither continue a number nor follow a preprocessor sigil; the escape prefix $ and operators
+        # such as ~ are not part of the identifier
+        _IDENTIFIER = re.compile(r"(?<![\w.?#@%])" + Identifier.PATTERN.pattern)
 
         def __init__(self, number: int, text: str) -> None:
             self.number = number
@@ -234,7 +237,7 @@ class NasmParser:
         def _process_structure_line(self, line: "NasmParser._Line", leading_comments: list[str]) -> None:
             assert self._structure is not None
             label = line.find_label()
-            if label is not None and self._is_local(label.text):
+            if label is not None and Identifier.is_local(label.text):
                 field_declaration = Declaration(
                     kind=DeclarationKind.FIELD,
                     name=label.text,
@@ -260,11 +263,11 @@ class NasmParser:
             # label definitions
             next_word = line.word_after(label)
             if next_word == "equ":
-                if not self._is_local(label.text):
+                if not Identifier.is_local(label.text):
                     self._close_open_label()
                 constant = self._declare(DeclarationKind.CONSTANT, line, label, self._qualify(label.text), leading_comments)
                 self._close(constant, line.number)
-            elif self._is_local(label.text):
+            elif Identifier.is_local(label.text):
                 self._close_open_local_label()
                 self._open_local_label = self._declare(
                     DeclarationKind.LOCAL_LABEL, line, label, self._qualify(label.text), leading_comments, parent=self._scope_label
@@ -292,7 +295,7 @@ class NasmParser:
             parent: Declaration | None = None,
         ) -> Declaration:
             """
-            Creates a declaration whose extent provisionally covers its own line only.
+            Creates a declaration whose extent provisionally covers its leading comments and its own line.
 
             :param parent: the declaration to add the new declaration to as a child; None to add it at top level
             """
@@ -302,7 +305,7 @@ class NasmParser:
                 key=key,
                 uri=self._uri,
                 name_range=self._token_range(line, name),
-                range=self._line_range(line.number, line.number),
+                range=self._line_range(line.number - len(leading_comments), line.number),
                 header=self._header(line, leading_comments),
             )
             if parent is not None:
@@ -312,7 +315,7 @@ class NasmParser:
             return declaration
 
         def _close(self, declaration: Declaration, end_line: int) -> None:
-            self._set_extent(declaration, max(declaration.range.start.line, end_line))
+            self._set_extent(declaration, max(declaration.name_range.start.line, end_line))
 
         def _close_open_local_label(self) -> None:
             if self._open_local_label is not None:
@@ -339,13 +342,9 @@ class NasmParser:
             """
             :return: the fully qualified name of the given name, prefixing local names with the current scope label
             """
-            if self._is_local(name) and self._scope_label is not None:
+            if Identifier.is_local(name) and self._scope_label is not None:
                 return self._scope_label.key + name
             return name
-
-        @staticmethod
-        def _is_local(name: str) -> bool:
-            return name.startswith(".") and not name.startswith("..")
 
         @staticmethod
         def _is_code_section(section_name: str) -> bool:

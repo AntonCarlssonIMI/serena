@@ -6,6 +6,7 @@ section .text
 global string_length
 global print_string
 global count_char
+global clear_mark
 
 ; returns in rax the length of the zero-terminated string at rdi
 string_length:
@@ -40,4 +41,10 @@ count_char:
     inc rdi
     jmp .next_char
 .done:
+    ret
+
+; clears the mark flag of the byte at rdi
+; in: rdi; clobbers: nothing
+clear_mark:
+    and byte [rdi], ~FLAG_MARK
     ret

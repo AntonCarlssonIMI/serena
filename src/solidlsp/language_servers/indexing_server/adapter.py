@@ -95,6 +95,7 @@ class IndexingServerAdapter(SolidLanguageServer, ABC):
                     },
                     "definition": {"dynamicRegistration": True},
                     "references": {"dynamicRegistration": True},
+                    "rename": {"dynamicRegistration": True},
                     "hover": {"contentFormat": ["markdown", "plaintext"]},
                 },
                 "workspace": {"workspaceFolders": True, "symbol": {"dynamicRegistration": True}},

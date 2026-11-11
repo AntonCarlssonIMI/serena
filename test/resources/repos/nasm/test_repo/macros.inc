@@ -3,6 +3,7 @@
 %define SYS_WRITE 1
 %define SYS_EXIT 60
 STDOUT equ 1
+FLAG_MARK equ 0x80
 
 %macro write_stdout 2
     mov rax, SYS_WRITE

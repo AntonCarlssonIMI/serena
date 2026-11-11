@@ -9,6 +9,7 @@ import logging
 import sys
 
 from lsprotocol import types as lsp
+from pygls.exceptions import JsonRpcInvalidParams
 
 from solidlsp.language_servers.indexing_server.server import IndexingLanguageServer
 from solidlsp.language_servers.indexing_server.text import SourceLocation
@@ -20,8 +21,8 @@ from solidlsp.language_servers.nasm.workspace_index import WorkspaceIndex
 
 class NasmServer(IndexingLanguageServer[SourceUnit]):
     """
-    Language server for NASM assembly, answering document symbol, definition, references, hover and workspace symbol
-    requests from an in-memory index of all NASM sources in the workspace folders
+    Language server for NASM assembly, answering document symbol, definition, references, rename, hover and workspace
+    symbol requests from an in-memory index of all NASM sources in the workspace folders
     (by default, files with the extensions ``.asm``, ``.nasm``, ``.inc`` and ``.mac``).
     """
 
@@ -63,6 +64,21 @@ class NasmServer(IndexingLanguageServer[SourceUnit]):
                 uri, self._to_text_position(params.position), include_declaration=params.context.include_declaration
             )
             return [self._to_location(location) for location in locations]
+
+        @self.feature(lsp.TEXT_DOCUMENT_RENAME)
+        def rename(params: lsp.RenameParams) -> lsp.WorkspaceEdit:
+            uri = self._prepare(params.text_document.uri)
+            try:
+                replacements = self._resolver.plan_rename(uri, self._to_text_position(params.position), params.new_name)
+            except ValueError as e:
+                raise JsonRpcInvalidParams(str(e)) from e
+            changes: dict[str, list[lsp.TextEdit]] = {}
+            for replacement in replacements:
+                location = replacement.location
+                changes.setdefault(location.uri, []).append(
+                    lsp.TextEdit(range=self._to_lsp_range(location.range), new_text=replacement.new_text)
+                )
+            return lsp.WorkspaceEdit(changes=changes)
 
         @self.feature(lsp.TEXT_DOCUMENT_HOVER)
         def hover(params: lsp.HoverParams) -> lsp.Hover | None:
